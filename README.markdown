@@ -24,11 +24,8 @@ probably not a very good idea.
 LICENSE
 -------
 
-This work is copyright 2008 planetbeing, all rights reserved. It will be
-released under an a free software license in the near future. Until then, it
-can only be used with explicit permission (which I probably have given anyone
-who is reading this right now) and is made available only for educational
-purposes.
+This work is released under the terms of the GNU General Public License,
+version 3. The full text of the license can be found in the LICENSE file.
 
 DEPENDENCIES
 ------------
