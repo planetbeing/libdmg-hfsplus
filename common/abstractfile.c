@@ -57,6 +57,7 @@ AbstractFile* createAbstractFileFromFile(FILE* file) {
 	toReturn->tell = ftellWrapper;
 	toReturn->getLength = fileGetLength;
 	toReturn->close = fcloseWrapper;
+	toReturn->type = AbstractFileTypeFile;
 	return toReturn;
 }
 
@@ -92,11 +93,15 @@ AbstractFile* createAbstractFileFromDummy() {
 	toReturn->tell = dummyTell;
 	toReturn->getLength = NULL;
 	toReturn->close = dummyClose;
+	toReturn->type = AbstractFileTypeDummy;
 	return toReturn;
 }
 
 size_t memRead(AbstractFile* file, void* data, size_t len) {
   MemWrapperInfo* info = (MemWrapperInfo*) (file->data); 
+  if(info->bufferSize < (info->offset + len)) {
+    len = info->bufferSize - info->offset;
+  }
   memcpy(data, (void*)((uint8_t*)(*(info->buffer)) + (uint32_t)info->offset), len);
   info->offset += (size_t)len;
   return len;
@@ -153,6 +158,7 @@ AbstractFile* createAbstractFileFromMemory(void** buffer, size_t size) {
 	toReturn->tell = memTell;
 	toReturn->getLength = memGetLength;
 	toReturn->close = memClose;
+	toReturn->type = AbstractFileTypeMem;
 	return toReturn;
 }
 
@@ -276,6 +282,7 @@ AbstractFile* createAbstractFileFromMemoryFile(void** buffer, size_t* size) {
 	toReturn->tell = memFileTell;
 	toReturn->getLength = memFileGetLength;
 	toReturn->close = memFileClose;
+	toReturn->type = AbstractFileTypeMemFile;
 	return toReturn;
 }
 
@@ -297,6 +304,7 @@ AbstractFile* createAbstractFileFromMemoryFileBuffer(void** buffer, size_t* size
 	toReturn->tell = memFileTell;
 	toReturn->getLength = memFileGetLength;
 	toReturn->close = memFileClose;
+	toReturn->type = AbstractFileTypeMemFile;
 	return toReturn;
 }
 

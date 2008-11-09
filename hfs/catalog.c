@@ -184,10 +184,6 @@ static int catalogCompare(BTKey* vLeft, BTKey* vRight) {
 static int catalogCompareCS(BTKey* vLeft, BTKey* vRight) {
   HFSPlusCatalogKey* left;
   HFSPlusCatalogKey* right;
-  uint16_t i;
-
-  uint16_t cLeft;
-  uint16_t cRight;
   
   left = (HFSPlusCatalogKey*) vLeft;
   right =(HFSPlusCatalogKey*) vRight;
@@ -466,7 +462,7 @@ HFSPlusCatalogRecord* getRecordFromPath3(const char* path, Volume* volume, char 
   char* pathLimit;
   
   uint32_t realParent;
-  char* lastWordDetectSlash; 
+ 
   int exact;
   
   if(path[0] == '\0' || (path[0] == '/' && path[1] == '\0')) {
@@ -522,12 +518,14 @@ HFSPlusCatalogRecord* getRecordFromPath3(const char* path, Volume* volume, char 
 
     if(record == NULL || exact == FALSE) {
       free(origPath);
+      if(record != NULL) {
+	      free(record);
+      }
       return NULL;
     }
 
     if(traverse) {
-      lastWordDetectSlash = strchr(word, '/');
-      if((lastWordDetectSlash && *(lastWordDetectSlash + 1) != '\0') || returnLink) {
+      if(((word + strlen(word) + 1) < pathLimit) || returnLink) {
         record = getLinkTarget(record, key.parentID, &key, volume);
         if(record == NULL || exact == FALSE) {
           free(origPath);
@@ -537,17 +535,23 @@ HFSPlusCatalogRecord* getRecordFromPath3(const char* path, Volume* volume, char 
     }
 	
     if(record->recordType == kHFSPlusFileRecord) {	
-      free(origPath);
+	if((word + strlen(word) + 1) >= pathLimit) {
+		free(origPath);
       
-      if(retKey != NULL) {
-        memcpy(retKey, &key, sizeof(HFSPlusCatalogKey));
-      }
+		if(retKey != NULL) {
+			memcpy(retKey, &key, sizeof(HFSPlusCatalogKey));
+		}
       
-      return record;
+		return record;
+	} else {
+		free(origPath);
+		free(record);
+		return NULL;
+	}
     }
     
     if(record->recordType != kHFSPlusFolderRecord)
-      panic("inconsistent catalog tree!");
+      hfs_panic("inconsistent catalog tree!");
     
     realParent = key.parentID;
     key.parentID = ((HFSPlusCatalogFolder*)record)->folderID;
@@ -738,12 +742,9 @@ int move(const char* source, const char* dest, Volume* volume) {
 
 int removeFile(const char* fileName, Volume* volume) {
   HFSPlusCatalogRecord* record;
-  HFSPlusCatalogRecord* parentRecord;
   HFSPlusCatalogKey key;
-  HFSPlusCatalogKey parentKey;
   io_func* io;
   HFSPlusCatalogFolder* parentFolder;
-  int exact;
 
   record = getRecordFromPath3(fileName, volume, NULL, &key, TRUE, FALSE, kHFSRootFolderID);
   if(record != NULL) {
@@ -831,6 +832,7 @@ int makeSymlink(const char* pathName, const char* target, Volume* volume) {
 	io = openRawFile(record->fileID, &record->dataFork, (HFSPlusCatalogRecord*) record, volume);
 	WRITE(io, 0, strlen(target), (void*) target);
 	CLOSE(io);
+	free(record);
 
 	return TRUE;
 }
@@ -867,13 +869,13 @@ HFSCatalogNodeID newFolder(const char* pathName, Volume* volume) {
   } else {
     name = lastSeparator + 1;
     *lastSeparator = '\0';
-    parentFolder = (HFSPlusCatalogFolder*) getRecordFromPath(path, volume, NULL, NULL);
-    
-    if(parentFolder == NULL || parentFolder->recordType != kHFSPlusFolderRecord) {
-      free(path);
-      free(parentFolder);
-      return FALSE;
-    }
+    parentFolder = (HFSPlusCatalogFolder*) getRecordFromPath(path, volume, NULL, NULL);  
+  }
+
+  if(parentFolder == NULL || parentFolder->recordType != kHFSPlusFolderRecord) {
+    free(path);
+    free(parentFolder);
+    return FALSE;
   }
   
   newFolderID = volume->volumeHeader->nextCatalogID++;
@@ -962,12 +964,12 @@ HFSCatalogNodeID newFile(const char* pathName, Volume* volume) {
     name = lastSeparator + 1;
     *lastSeparator = '\0';
     parentFolder = (HFSPlusCatalogFolder*) getRecordFromPath(path, volume, NULL, NULL);
-    
-    if(parentFolder == NULL || parentFolder->recordType != kHFSPlusFolderRecord) {
-      free(path);
-      free(parentFolder);
-      return FALSE;
-    }
+  }
+
+  if(parentFolder == NULL || parentFolder->recordType != kHFSPlusFolderRecord) {
+    free(path);
+    free(parentFolder);
+    return FALSE;
   }
   
   newFileID = volume->volumeHeader->nextCatalogID++;

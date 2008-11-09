@@ -8,18 +8,17 @@
 
 #include <hfs/hfslib.h>
 #include "abstractfile.h"
+#include <inttypes.h>
 
 char endianness;
 
 
 void cmd_ls(Volume* volume, int argc, const char *argv[]) {
-	HFSPlusCatalogRecord* record;
-	char* name;
-	
 	if(argc > 1)
 		hfs_ls(volume, argv[1]);
 	else
-		hfs_ls(volume, "/");}
+		hfs_ls(volume, "/");
+}
 
 void cmd_cat(Volume* volume, int argc, const char *argv[]) {
 	HFSPlusCatalogRecord* record;
@@ -216,11 +215,11 @@ void cmd_grow(Volume* volume, int argc, const char *argv[]) {
 	}
 	
 	newSize = 0;
-	sscanf(argv[1], "%lld", &newSize);
+	sscanf(argv[1], "%" PRId64, &newSize);
 
 	grow_hfs(volume, newSize);
 
-	printf("grew volume: %lld\n", newSize);
+	printf("grew volume: %" PRId64 "\n", newSize);
 }
 
 void TestByteOrder()
@@ -283,7 +282,7 @@ int main(int argc, const char *argv[]) {
 		} else if(strcmp(argv[2], "grow") == 0) {
 			cmd_grow(volume, argc - 2, argv + 2);
 		} else if(strcmp(argv[2], "debug") == 0) {
-			if(argc > 3 && argv[3] == "verbose") {
+			if(argc > 3 && strcmp(argv[3], "verbose") == 0) {
 				debugBTree(volume->catalogTree, TRUE);
 			} else {
 				debugBTree(volume->catalogTree, FALSE);

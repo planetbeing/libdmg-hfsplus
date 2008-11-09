@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
 #include <sys/types.h>
 
 #ifdef WIN32
@@ -10,6 +12,9 @@
 #define ftello ftello64
 #define off_t off64_t
 #define mkdir(x, y) mkdir(x)
+#define PATH_SEPARATOR "\\"
+#else
+#define PATH_SEPARATOR "/"
 #endif
 
 #define TRUE 1
@@ -57,6 +62,28 @@ static inline void flipEndianLE(unsigned char* x, int length) {
       x[length - i - 1] = tmp;
     }
   }
+}
+
+static inline void hexToBytes(const char* hex, uint8_t** buffer, size_t* bytes) {
+	*bytes = strlen(hex) / 2;
+	*buffer = (uint8_t*) malloc(*bytes);
+	size_t i;
+	for(i = 0; i < *bytes; i++) {
+		uint32_t byte;
+		sscanf(hex, "%2x", &byte);
+		(*buffer)[i] = byte;
+		hex += 2;
+	}
+}
+
+static inline void hexToInts(const char* hex, unsigned int** buffer, size_t* bytes) {
+	*bytes = strlen(hex) / 2;
+	*buffer = (unsigned int*) malloc((*bytes) * sizeof(int));
+	size_t i;
+	for(i = 0; i < *bytes; i++) {
+		sscanf(hex, "%2x", &((*buffer)[i]));
+		hex += 2;
+	}
 }
 
 struct io_func_struct;
