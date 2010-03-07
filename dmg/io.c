@@ -182,6 +182,14 @@ void extractBLKX(AbstractFile* in, AbstractFile* out, BLKXTable* blkx) {
 		printf("run %d: start=%" PRId64 " sectors=%" PRId64 ", length=%" PRId64 ", fileOffset=0x%" PRIx64 "\n", i, initialOffset + (blkx->runs[i].sectorStart * SECTOR_SIZE), blkx->runs[i].sectorCount, blkx->runs[i].compLength, blkx->runs[i].compOffset);
 		
 		switch(blkx->runs[i].type) {
+		        case BLOCK_ADC:
+				do {
+					ASSERT((strm.avail_in = in->read(in, inBuffer, blkx->runs[i].compLength)) == blkx->runs[i].compLength, "fread");
+					strm.avail_out = adc_decompress(strm.avail_in, inBuffer, bufferSize, outBuffer, &have);
+					ASSERT(out->write(out, outBuffer, have) == have, "mWrite");
+					bufferRead+=strm.avail_out;
+				} while (bufferRead < blkx->runs[i].compLength);
+		  break;
 			case BLOCK_ZLIB:
 				strm.zalloc = Z_NULL;
 				strm.zfree = Z_NULL;

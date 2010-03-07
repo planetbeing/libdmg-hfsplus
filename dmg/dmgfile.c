@@ -30,6 +30,14 @@ static void cacheRun(DMG* dmg, BLKXTable* blkx, int run) {
 	ASSERT(dmg->dmg->seek(dmg->dmg, blkx->dataStart + blkx->runs[run].compOffset) == 0, "fseeko");
 	
     switch(blkx->runs[run].type) {
+                 case BLOCK_ADC:
+			 bufferRead = 0;
+			 do {
+				 strm.avail_in = dmg->dmg->read(dmg->dmg, inBuffer, blkx->runs[run].compLength);
+				 strm.avail_out = adc_decompress(strm.avail_in, inBuffer, bufferSize, dmg->runData, &have);
+				 bufferRead+=strm.avail_out;
+			 } while (bufferRead < blkx->runs[run].compLength);
+			 break;
 		case BLOCK_ZLIB:
 			strm.zalloc = Z_NULL;
 			strm.zfree = Z_NULL;
