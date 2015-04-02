@@ -8,6 +8,8 @@
 
 #define SECTORS_AT_A_TIME 0x200
 
+int bufferRead;
+
 BLKXTable* insertBLKX(AbstractFile* out, AbstractFile* in, uint32_t firstSectorNumber, uint32_t numSectors, uint32_t blocksDescriptor,
 			uint32_t checksumType, ChecksumFunc uncompressedChk, void* uncompressedChkToken, ChecksumFunc compressedChk,
 			void* compressedChkToken, Volume* volume) {
