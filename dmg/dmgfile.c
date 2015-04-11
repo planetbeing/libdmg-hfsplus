@@ -11,6 +11,8 @@
 #include <dmg/adc.h>
 #include <dmg/dmgfile.h>
 
+int bufferRead;
+
 static void cacheRun(DMG* dmg, BLKXTable* blkx, int run) {
 	size_t bufferSize;
 	z_stream strm;
