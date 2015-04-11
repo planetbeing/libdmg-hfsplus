@@ -8,6 +8,7 @@
 #include <zlib.h>
 
 #include <dmg/dmg.h>
+#include <dmg/adc.h>
 #include <dmg/dmgfile.h>
 
 static void cacheRun(DMG* dmg, BLKXTable* blkx, int run) {
@@ -16,40 +17,43 @@ static void cacheRun(DMG* dmg, BLKXTable* blkx, int run) {
 	void* inBuffer;
 	int ret;
 	size_t have;
-	
+
 	if(dmg->runData) {
 		free(dmg->runData);
 	}
-	
+
 	bufferSize = SECTOR_SIZE * blkx->runs[run].sectorCount;
-	
+
 	dmg->runData = (void*) malloc(bufferSize);
 	inBuffer = (void*) malloc(bufferSize);
 	memset(dmg->runData, 0, bufferSize);
-	
+
 	ASSERT(dmg->dmg->seek(dmg->dmg, blkx->dataStart + blkx->runs[run].compOffset) == 0, "fseeko");
-	
+
     switch(blkx->runs[run].type) {
                  case BLOCK_ADC:
-			 bufferRead = 0;
+                 {
+			 size_t bufferRead = 0;
 			 do {
 				 strm.avail_in = dmg->dmg->read(dmg->dmg, inBuffer, blkx->runs[run].compLength);
 				 strm.avail_out = adc_decompress(strm.avail_in, inBuffer, bufferSize, dmg->runData, &have);
 				 bufferRead+=strm.avail_out;
 			 } while (bufferRead < blkx->runs[run].compLength);
 			 break;
+                }
+
 		case BLOCK_ZLIB:
 			strm.zalloc = Z_NULL;
 			strm.zfree = Z_NULL;
 			strm.opaque = Z_NULL;
 			strm.avail_in = 0;
 			strm.next_in = Z_NULL;
-			
+
 			ASSERT(inflateInit(&strm) == Z_OK, "inflateInit");
-			
+
 			ASSERT((strm.avail_in = dmg->dmg->read(dmg->dmg, inBuffer, blkx->runs[run].compLength)) == blkx->runs[run].compLength, "fread");
 			strm.next_in = (unsigned char*) inBuffer;
-			
+
 			do {
 				strm.avail_out = bufferSize;
 				strm.next_out = (unsigned char*) dmg->runData;
@@ -59,7 +63,7 @@ static void cacheRun(DMG* dmg, BLKXTable* blkx, int run) {
 				}
 				have = bufferSize - strm.avail_out;
 			} while (strm.avail_out == 0);
-			
+
 			ASSERT(inflateEnd(&strm) == Z_OK, "inflateEnd");
 			break;
 		case BLOCK_RAW:
@@ -74,7 +78,7 @@ static void cacheRun(DMG* dmg, BLKXTable* blkx, int run) {
 		default:
 			break;
     }
-	
+
 	dmg->runStart = (blkx->runs[run].sectorStart + blkx->firstSectorNumber) * SECTOR_SIZE;
 	dmg->runEnd = dmg->runStart + (blkx->runs[run].sectorCount * SECTOR_SIZE);
 }
@@ -83,7 +87,7 @@ static void cacheOffset(DMG* dmg, off_t location) {
 	int i;
 	int j;
 	uint64_t sector;
-	
+
 	sector = (uint64_t)(location / SECTOR_SIZE);
 
 	for(i = 0; i < dmg->numBLKX; i++) {
@@ -105,7 +109,7 @@ static int dmgFileRead(io_func* io, off_t location, size_t size, void *buffer) {
 	dmg = (DMG*) io->data;
 
 	location += dmg->offset;
-	
+
 	if(size == 0) {
 		return TRUE;
 	}
@@ -113,18 +117,18 @@ static int dmgFileRead(io_func* io, off_t location, size_t size, void *buffer) {
 	if(location < dmg->runStart || location >= dmg->runEnd) {
 		cacheOffset(dmg, location);
 	}
-	
+
 	if((location + size) > dmg->runEnd) {
 		toRead = dmg->runEnd - location;
 	} else {
 		toRead = size;
 	}
-	
+
 	memcpy(buffer, (void*)((uint8_t*)dmg->runData + (uint32_t)(location - dmg->runStart)), toRead);
 	size -= toRead;
 	location += toRead;
 	buffer = (void*)((uint8_t*)buffer + toRead);
-	
+
 	if(size > 0) {
 		return dmgFileRead(io, location - dmg->offset, size, buffer);
 	} else {
@@ -140,13 +144,13 @@ static int dmgFileWrite(io_func* io, off_t location, size_t size, void *buffer) 
 
 static void closeDmgFile(io_func* io) {
 	DMG* dmg;
-	
+
 	dmg = (DMG*) io->data;
-	
+
 	if(dmg->runData) {
 		free(dmg->runData);
 	}
-	
+
 	free(dmg->blkx);
 	releaseResources(dmg->resources);
 	dmg->dmg->close(dmg->dmg);
@@ -157,36 +161,36 @@ static void closeDmgFile(io_func* io) {
 io_func* openDmgFile(AbstractFile* abstractIn) {
 	off_t fileLength;
 	UDIFResourceFile resourceFile;
-	DMG* dmg;	
+	DMG* dmg;
 	ResourceData* blkx;
 	ResourceData* curData;
 	int i;
-	
+
 	io_func* toReturn;
 
 	if(abstractIn == NULL) {
 		return NULL;
 	}
-	
+
 	fileLength = abstractIn->getLength(abstractIn);
 	abstractIn->seek(abstractIn, fileLength - sizeof(UDIFResourceFile));
 	readUDIFResourceFile(abstractIn, &resourceFile);
-	
+
 	dmg = (DMG*) malloc(sizeof(DMG));
 	dmg->dmg = abstractIn;
 	dmg->resources = readResources(abstractIn, &resourceFile);
 	dmg->numBLKX = 0;
-	
+
 	blkx = (getResourceByKey(dmg->resources, "blkx"))->data;
-	
+
 	curData = blkx;
 	while(curData != NULL) {
 		dmg->numBLKX++;
-		curData = curData->next;	
+		curData = curData->next;
 	}
-	
+
 	dmg->blkx = (BLKXTable**) malloc(sizeof(BLKXTable*) * dmg->numBLKX);
-	
+
 	i = 0;
 	while(blkx != NULL) {
 		dmg->blkx[i] = (BLKXTable*)(blkx->data);
@@ -195,17 +199,17 @@ io_func* openDmgFile(AbstractFile* abstractIn) {
 	}
 
 	dmg->offset = 0;
-	
+
 	dmg->runData = NULL;
 	cacheOffset(dmg, 0);
-	
+
 	toReturn = (io_func*) malloc(sizeof(io_func));
-	
+
 	toReturn->data = dmg;
 	toReturn->read = &dmgFileRead;
 	toReturn->write = &dmgFileWrite;
 	toReturn->close = &closeDmgFile;
-	
+
 	return toReturn;
 }
 
@@ -234,7 +238,7 @@ io_func* openDmgFilePartition(AbstractFile* abstractIn, int partition) {
 	flipPartitionMultiple(partitions, FALSE, FALSE, BlockSize);
 	numPartitions = partitions->pmMapBlkCnt;
 	partitions = (Partition*) realloc(partitions, numPartitions * BlockSize);
-	toReturn->read(toReturn, BlockSize, numPartitions * BlockSize, partitions);	
+	toReturn->read(toReturn, BlockSize, numPartitions * BlockSize, partitions);
 	flipPartition(partitions, FALSE, BlockSize);
 
 	if(partition >= 0) {

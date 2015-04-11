@@ -9,7 +9,7 @@
 #define true 1
 #define false 0
 
-int adc_decompress(int in_size, unsigned char *input, int avail_size, unsigned char *output, int *bytes_written);
+size_t adc_decompress(size_t in_size, unsigned char *input, size_t avail_size, unsigned char *output, size_t *bytes_written);
 int adc_chunk_type(char _byte);
 int adc_chunk_size(char _byte);
 int adc_chunk_offset(unsigned char *chunk_start);

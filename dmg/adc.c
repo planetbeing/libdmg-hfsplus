@@ -6,7 +6,7 @@
 #include <dmg/dmg.h>
 #include <dmg/adc.h>
 
-int adc_decompress(int in_size, unsigned char *input, int avail_size, unsigned char *output, int *bytes_written)
+size_t adc_decompress(size_t in_size, unsigned char *input, size_t avail_size, unsigned char *output, size_t *bytes_written)
 {
 	if (in_size == 0)
 		return 0;
