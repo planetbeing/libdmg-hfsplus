@@ -124,6 +124,8 @@ int buildDmg(AbstractFile* abstractIn, AbstractFile* abstractOut) {
 	nsiz = NULL;
     
 	memset(&dataForkToken, 0, sizeof(ChecksumToken));
+	memset(koly.fUDIFMasterChecksum.data, 0, sizeof(koly.fUDIFMasterChecksum.data));
+	memset(koly.fUDIFDataForkChecksum.data, 0, sizeof(koly.fUDIFDataForkChecksum.data));
 	
 	printf("Creating and writing DDM and partition map...\n"); fflush(stdout);
 	
@@ -296,6 +298,8 @@ int convertToDMG(AbstractFile* abstractIn, AbstractFile* abstractOut) {
 	nsiz = NULL;
 	myNSiz = NULL;
 	memset(&dataForkToken, 0, sizeof(ChecksumToken));
+	memset(koly.fUDIFMasterChecksum.data, 0, sizeof(koly.fUDIFMasterChecksum.data));
+	memset(koly.fUDIFDataForkChecksum.data, 0, sizeof(koly.fUDIFDataForkChecksum.data));
 	
 	partitions = (Partition*) malloc(SECTOR_SIZE);
 	
