@@ -5,5 +5,5 @@ target_link_libraries(hfs common)
 add_executable(hfsplus hfs.c)
 target_link_libraries (hfsplus hfs)
 
-install(TARGETS hfsplus DESTINATION .)
+install(TARGETS hfsplus DESTINATION bin)
 

@@ -4,5 +4,5 @@ add_executable(hdutil hdutil.c)
 
 target_link_libraries (hdutil dmg hfs common)
 
-install(TARGETS hdutil DESTINATION .)
+install(TARGETS hdutil DESTINATION bin)
 
