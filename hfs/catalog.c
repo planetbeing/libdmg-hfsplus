@@ -209,7 +209,10 @@ static BTKey* catalogKeyRead(off_t offset, io_func* io) {
   FLIPENDIAN(key->keyLength);
   FLIPENDIAN(key->parentID);
   FLIPENDIAN(key->nodeName.length);
-   
+  
+  ASSERT(key->nodeName.length <= 255, "key->nodeName.length <= 255");
+  ASSERT(key->keyLength >= (UNICODE_START - sizeof(uint16_t) + (key->nodeName.length * sizeof(uint16_t))), "key->keyLength >= (UNICODE_START - sizeof(uint16_t) + (key->nodeName.length * sizeof(uint16_t)))");
+
   if(!READ(io, offset + UNICODE_START, key->nodeName.length * sizeof(uint16_t), ((unsigned char *)key) + UNICODE_START))
     return NULL;
     

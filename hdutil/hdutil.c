@@ -239,6 +239,8 @@ void cmd_untar(Volume* volume, int argc, const char *argv[]) {
 	}
 
 	hfs_untar(volume, inFile);
+
+    inFile->close(inFile);
 }
 
 void TestByteOrder()

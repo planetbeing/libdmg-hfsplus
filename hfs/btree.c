@@ -1385,6 +1385,7 @@ static uint32_t removeRecord(BTree* tree, uint32_t root, BTKey* searchKey, int* 
   BTKey* oldKey;
   off_t recordOffset;
   off_t recordDataOffset;
+  off_t lastRecordOffset;
   off_t lastRecordDataOffset;
   
   int childGone;
@@ -1397,6 +1398,7 @@ static uint32_t removeRecord(BTree* tree, uint32_t root, BTKey* searchKey, int* 
   freeSpace = getFreeSpace(root, descriptor, tree);
   
   nodeToTraverse = 0;
+  lastRecordOffset = 0;
   lastRecordDataOffset = 0;
   newNode = 0;
   
@@ -1434,8 +1436,8 @@ static uint32_t removeRecord(BTree* tree, uint32_t root, BTKey* searchKey, int* 
         }
       } else {
         nodeToTraverse = getNodeNumberFromPointerRecord(recordDataOffset, tree->io);
-        lastRecordDataOffset = recordDataOffset;
         checkForChangedKey = TRUE;
+        lastRecordOffset = recordOffset;
         break;
       }
     } else if(res > 0) {
@@ -1450,7 +1452,8 @@ static uint32_t removeRecord(BTree* tree, uint32_t root, BTKey* searchKey, int* 
         break;
       }
     }
-    
+   
+    lastRecordOffset = recordOffset;
     lastRecordDataOffset = recordDataOffset;
     
     free(key);
@@ -1464,7 +1467,7 @@ static uint32_t removeRecord(BTree* tree, uint32_t root, BTKey* searchKey, int* 
     i = descriptor->numRecords - 1;
   }
   
-  oldKey = READ_KEY(tree, lastRecordDataOffset, tree->io);
+  oldKey = READ_KEY(tree, lastRecordOffset, tree->io);
   newNode = removeRecord(tree, nodeToTraverse, searchKey, callAgain, &childGone);
   
   if(childGone) {
@@ -1486,7 +1489,10 @@ static uint32_t removeRecord(BTree* tree, uint32_t root, BTKey* searchKey, int* 
           // very unlikely. We need to split this node before we can resize the key of this index. Do that first, and tell them to call again.
           *callAgain = TRUE;
           free(oldKey);
-          return splitNode(root, descriptor, tree);
+          free(key);
+          uint32_t newNode = splitNode(root, descriptor, tree);
+          free(descriptor);
+          return newNode;
         }
         
         moveRecordsDown(tree, descriptor, i + 1, root, key->keyLength - oldKey->keyLength, 0);
@@ -1549,7 +1555,7 @@ int removeFromBTree(BTree* tree, BTKey* searchKey) {
   int callAgain;
   int gone;
   uint32_t newNode;
-  
+
   do {
     callAgain = FALSE;
     newNode = removeRecord(tree, tree->headerRec->rootNode, searchKey, &callAgain, &gone);
