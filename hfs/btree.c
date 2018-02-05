@@ -1382,6 +1382,7 @@ static uint32_t removeRecord(BTree* tree, uint32_t root, BTKey* searchKey, int* 
   uint32_t newNodeBigEndian;
   
   BTKey* key;
+  BTKey* oldKey;
   off_t recordOffset;
   off_t recordDataOffset;
   off_t lastRecordDataOffset;
@@ -1433,6 +1434,7 @@ static uint32_t removeRecord(BTree* tree, uint32_t root, BTKey* searchKey, int* 
         }
       } else {
         nodeToTraverse = getNodeNumberFromPointerRecord(recordDataOffset, tree->io);
+        lastRecordDataOffset = recordDataOffset;
         checkForChangedKey = TRUE;
         break;
       }
@@ -1462,6 +1464,7 @@ static uint32_t removeRecord(BTree* tree, uint32_t root, BTKey* searchKey, int* 
     i = descriptor->numRecords - 1;
   }
   
+  oldKey = READ_KEY(tree, lastRecordDataOffset, tree->io);
   newNode = removeRecord(tree, nodeToTraverse, searchKey, callAgain, &childGone);
   
   if(childGone) {
@@ -1478,14 +1481,15 @@ static uint32_t removeRecord(BTree* tree, uint32_t root, BTKey* searchKey, int* 
       
       key = READ_KEY(tree, getRecordOffset(0, nodeToTraverse, tree), tree->io);
       
-      if(searchKey->keyLength != key->keyLength) {
-        if(key->keyLength > searchKey->keyLength && freeSpace < (key->keyLength - searchKey->keyLength)) {
+      if(oldKey->keyLength != key->keyLength) {
+        if(key->keyLength > oldKey->keyLength && freeSpace < (key->keyLength - oldKey->keyLength)) {
           // very unlikely. We need to split this node before we can resize the key of this index. Do that first, and tell them to call again.
           *callAgain = TRUE;
+          free(oldKey);
           return splitNode(root, descriptor, tree);
         }
         
-        moveRecordsDown(tree, descriptor, i + 1, root, key->keyLength - searchKey->keyLength, 0);
+        moveRecordsDown(tree, descriptor, i + 1, root, key->keyLength - oldKey->keyLength, 0);
       }
       
       ASSERT(WRITE_KEY(tree, recordOffset, key, tree->io), "WRITE_KEY");
@@ -1496,6 +1500,8 @@ static uint32_t removeRecord(BTree* tree, uint32_t root, BTKey* searchKey, int* 
       free(key);
     }
   }
+
+  free(oldKey);
   
   if(newNode == 0) {
     if(descriptor->numRecords == 0) {
