@@ -776,11 +776,13 @@ int move(const char* source, const char* dest, Volume* volume) {
   flipCatalogThread(thread, TRUE);
   addToBTree(volume->catalogTree, (BTKey*)(&destKey), threadLength, (unsigned char *)(thread));
     
-  /* adjust valence */
-  srcFolderRec->valence--;
-  updateCatalog(volume, (HFSPlusCatalogRecord*) srcFolderRec);
-  destRec->valence++;
-  updateCatalog(volume, (HFSPlusCatalogRecord*) destRec);
+  /* adjust valence if source folder and destination folder are different. */
+  if (srcFolderRec->folderID != destRec->folderID) {
+      srcFolderRec->valence--;
+      updateCatalog(volume, (HFSPlusCatalogRecord*) srcFolderRec);
+      destRec->valence++;
+      updateCatalog(volume, (HFSPlusCatalogRecord*) destRec);
+  }
   
   free(thread);
   free(destPath);
@@ -813,6 +815,10 @@ int removeFile(const char* fileName, Volume* volume) {
 
 		if(record->recordType == kHFSPlusFileRecord) {
 			io = openRawFile(((HFSPlusCatalogFile*)record)->fileID, &((HFSPlusCatalogFile*)record)->dataFork, record, volume);
+			allocate((RawFile*)io->data, 0);
+			CLOSE(io);
+			
+            io = openRawFile(((HFSPlusCatalogFile*)record)->fileID, &((HFSPlusCatalogFile*)record)->resourceFork, record, volume);
 			allocate((RawFile*)io->data, 0);
 			CLOSE(io);
 
