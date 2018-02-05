@@ -51,9 +51,9 @@ static void writeChunk(FileVaultInfo* info) {
 	myChunk = info->curChunk;
 
 	FLIPENDIAN(myChunk);
-	HMAC_Init_ex(&(info->hmacCTX), NULL, 0, NULL, NULL);
-	HMAC_Update(&(info->hmacCTX), (unsigned char *) &myChunk, sizeof(uint32_t));
-	HMAC_Final(&(info->hmacCTX), msgDigest, &msgDigestLen);
+    HMAC_Init_ex(info->hmacCTX, NULL, 0, NULL, NULL);
+	HMAC_Update(info->hmacCTX, (unsigned char *) &myChunk, sizeof(uint32_t));
+	HMAC_Final(info->hmacCTX, msgDigest, &msgDigestLen);
 
 	AES_cbc_encrypt(info->chunk, buffer, info->blockSize, &(info->aesEncKey), msgDigest, AES_ENCRYPT);
 
@@ -85,9 +85,9 @@ static void cacheChunk(FileVaultInfo* info, uint32_t chunk) {
 	info->curChunk = chunk;
 
 	FLIPENDIAN(chunk);
-	HMAC_Init_ex(&(info->hmacCTX), NULL, 0, NULL, NULL);
-	HMAC_Update(&(info->hmacCTX), (unsigned char *) &chunk, sizeof(uint32_t));
-	HMAC_Final(&(info->hmacCTX), msgDigest, &msgDigestLen);
+    HMAC_Init_ex(info->hmacCTX, NULL, 0, NULL, NULL);
+	HMAC_Update(info->hmacCTX, (unsigned char *) &chunk, sizeof(uint32_t));
+	HMAC_Final(info->hmacCTX, msgDigest, &msgDigestLen);
 
 	AES_cbc_encrypt(buffer, info->chunk, info->blockSize, &(info->aesKey), msgDigest, AES_DECRYPT);
 }
@@ -177,7 +177,7 @@ void fvClose(AbstractFile* file) {
 		cacheChunk(info, 0);
 	}
 
-	HMAC_CTX_cleanup(&(info->hmacCTX));
+	HMAC_CTX_free(info->hmacCTX);
 
 	if(info->headerDirty) {
 		if(info->version == 2) {
@@ -234,8 +234,8 @@ AbstractFile* createAbstractFileFromFileVault(AbstractFile* file, const char* ke
 		hmacKey[i] = curByte;
 	}
 
-	HMAC_CTX_init(&(info->hmacCTX));
-	HMAC_Init_ex(&(info->hmacCTX), hmacKey, sizeof(hmacKey), EVP_sha1(), NULL);
+    info->hmacCTX = HMAC_CTX_new();
+	HMAC_Init_ex(info->hmacCTX, hmacKey, sizeof(hmacKey), EVP_sha1(), NULL);
 	AES_set_decrypt_key(aesKey, FILEVAULT_CIPHER_KEY_LENGTH * 8, &(info->aesKey));
 	AES_set_encrypt_key(aesKey, FILEVAULT_CIPHER_KEY_LENGTH * 8, &(info->aesEncKey));
 
