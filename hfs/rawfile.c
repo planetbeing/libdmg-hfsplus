@@ -200,12 +200,12 @@ static int rawFileRead(io_func* io,off_t location, size_t size, void *buffer) {
 		possible = extent->blockCount * blockSize - locationInBlock;
 
 		if(size > possible) {
-			ASSERT(READ(volume->image, extent->startBlock * blockSize + locationInBlock, possible, buffer), "READ");
+			ASSERT(READ(volume->image, ((off_t)extent->startBlock) * blockSize + locationInBlock, possible, buffer), "READ");
 			size -= possible;
 			buffer = (void*)(((size_t)buffer) + possible);
 			extent = extent->next;
 		} else {
-			ASSERT(READ(volume->image, extent->startBlock * blockSize + locationInBlock, size, buffer), "READ");
+			ASSERT(READ(volume->image, ((off_t)extent->startBlock) * blockSize + locationInBlock, size, buffer), "READ");
 			break;
 		}
 
