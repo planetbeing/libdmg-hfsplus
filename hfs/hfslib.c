@@ -635,7 +635,7 @@ void hfs_ls(Volume* volume, const char* path) {
 		printf("No such file or directory\n");
 	}
 
-	printf("Total filesystem size: %d, free: %d\n", (volume->volumeHeader->totalBlocks - volume->volumeHeader->freeBlocks) * volume->volumeHeader->blockSize, volume->volumeHeader->freeBlocks * volume->volumeHeader->blockSize);
+	printf("Total filesystem size: %lld, free: %lld\n", ((uint64_t)(volume->volumeHeader->totalBlocks - volume->volumeHeader->freeBlocks)) * volume->volumeHeader->blockSize, ((uint64_t)volume->volumeHeader->freeBlocks) * volume->volumeHeader->blockSize); // cast to uint64_t to be plateform independant.
 	
 	free(record);
 }
