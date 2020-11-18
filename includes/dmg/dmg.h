@@ -256,7 +256,7 @@ static inline void writeUInt32(AbstractFile* file, uint32_t data) {
 	ASSERT(file->write(file, &data, sizeof(data)) == sizeof(data), "fwrite");
 }
 
-static inline uint32_t readUInt64(AbstractFile* file) {
+static inline uint64_t readUInt64(AbstractFile* file) {
 	uint64_t data;
 	
 	ASSERT(file->read(file, &data, sizeof(data)) == sizeof(data), "fread");
